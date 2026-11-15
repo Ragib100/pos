@@ -1,0 +1,137 @@
+# POS System
+
+Multi-shop, multi-branch point-of-sale backend for Bangladesh retail (grocery, pharmacy, clothing, generic). One backend serves every shop type. Shop types differ only by configuration, never by code branches. Launch requires all four presets (generic, grocery, pharmacy, clothing) to work end to end, so never design or test for a single shop type.
+
+**Stack:**
+- Backend: Python, Django, Django ORM
+- API: Django REST Framework, with drf-spectacular (OpenAPI docs) and django-filter (filtering)
+- Database: PostgreSQL, via psycopg 3
+- Background jobs: Celery with Redis (add when the first background job is needed, not before)
+- Tests: Django's built-in test runner (pytest-django is optional, not adopted)
+- Frontend: Next.js. It proxies API calls to Django, so the browser only talks to the Next.js origin (no CORS for the web app).
+- API authentication: server-side sessions on `auth_sessions` (see Authentication below). Not JWT.
+
+## Read before you design or change anything
+
+The docs are the source of truth. Read the one that applies before touching related code. Do not read them all every session.
+
+| Need | Read |
+|---|---|
+| What the system must do (FR/NFR codes, phases) | `docs/REQUIREMENTS.md` |
+| Why a design choice was made | `docs/DECISIONS.md` |
+| Tables, relationships, constraints | `docs/ER-DIAGRAM.md` |
+| Every column and why a table exists | `docs/DATA-DICTIONARY.md` |
+| Your task (steps, dependencies, done-when) | `docs/tasks/<LANE>.md` |
+| Planned order of work, team lanes, decision gates, exit criteria | `docs/PLAN.md` |
+| How the parts fit, which app owns which table, failure behaviour | `docs/ARCHITECTURE.md` |
+| API conventions, error format | `docs/CONTRACTS.md` (source of truth for endpoints: `backend/schema.yml`) |
+| Every API operation and what it receives and returns | `docs/API.md` |
+| Every frontend page and which API it calls | `docs/PAGES.md` |
+| Setup and the task loop | `docs/SETUP.md` |
+| Which doc is which | `docs/README.md` |
+
+If code and docs disagree, stop and ask. If you change a design (table, column, rule), update the matching docs in the same change and add an entry to `docs/DECISIONS.md` for any real decision.
+
+## Architecture
+
+- **Modular monolith.** One Django project, one deployable. Each domain is a Django app under `backend/apps/`: `accounts` (users, shops, branches, roles, shifts), `catalog`, `inventory`, `sales`, `customers`, `purchasing`, `promotions`, `audit`, and a read-only `reports` app. Table ownership per app is in `docs/ARCHITECTURE.md`.
+- Apps talk to each other through their `services.py` (writes) and `selectors.py` (reads) only. Do not write to another app's models directly. Do not import another app's views or serializers.
+- One shared PostgreSQL database and schema. Tenant isolation uses a `shop_id` column plus Row-Level Security (RLS).
+- No microservices. Notifications, reporting and background jobs may be split out later, not now.
+
+## Repository layout
+
+Monorepo (see `docs/DECISIONS.md`, D-022):
+
+```
+backend/    Django project; apps under backend/apps/
+frontend/   Next.js app; terminal screens in src/app/(terminal), admin screens in src/app/(admin)
+infra/      Docker and deployment files
+loadtest/   load tests
+scripts/    helper scripts
+docs/       all documentation (see docs/README.md)
+.claude/    Claude Code settings, rules, skills, subagents
+Makefile    make env, up, down, migrate, test, schema, seed (created by task B1-00)
+```
+
+Ownership: BE1 owns accounts, sales, promotions, audit and infra. BE2 owns catalog, inventory, customers, purchasing and reports. FE1 owns the terminal screens. FE2 owns the admin screens and shared components. Touch another lane's code only for a task in your own file.
+
+## Non-negotiable rules
+
+These come from the design. Never break them without asking first.
+
+1. **Every shop-owned table has `shop_id`** and RLS enabled and forced. Branch-scoped tables also have `branch_id`. Only `users`, `permissions`, `shop_types`, `shops` and `auth_sessions` are global.
+2. **The tenant comes from the verified session/membership, never from a client-supplied `shop_id`.** Per request, inside a transaction, set the allowed shops with `set_config('app.shop_ids', ..., true)`.
+3. **The app connects as a limited role** that is not a superuser and not the table owner. Migrations run as a separate privileged role.
+4. **Money is `DecimalField(max_digits=14, decimal_places=2)`. Quantity is `max_digits=14, decimal_places=3`.** Never use floats for either.
+5. **Stock and balances are append-only ledgers** (`stock_movements`, `customer_ledger`, `supplier_ledger`, `loyalty_transactions`, `gift_card_transactions`). Never update or delete ledger rows. Cached balances (`stock_levels`, customer and supplier balances) are changed in the same transaction as the ledger entry.
+6. **A completed sale is immutable.** Fix mistakes with a void or a return, never by editing lines. A void is allowed only while the sale's shift is open, needs manager approval and a reason, writes reversing entries and deletes nothing. After the shift closes, use a return.
+7. **Sale lines snapshot** name, price, cost and tax rate at the time of sale.
+8. **Primary keys are generated by the server.** Sales carry a `client_request_id`, unique per shop (`UNIQUE (shop_id, client_request_id)`), so a retried request creates the sale only once. Do not accept client-chosen primary keys (until offline sync exists).
+9. **One open shift per user and one open shift per register** (partial unique indexes). Moving to another branch or shop means a new shift.
+10. **A shop must always keep at least one active owner.**
+11. **Shop types are configuration** (`shop_types` presets, `shops.enabled_modules`, `attribute_definitions`, JSONB `products.attributes`). Do not add shop-type `if` branches in business code.
+12. **The sellable unit is the product variant.** Sales, stock and prices reference `variant_id`.
+
+## Django conventions
+
+- Use a **custom user model from the start** (`AUTH_USER_MODEL`), logging in by phone or email. Never use the default `User`.
+- Tenant models inherit a shared abstract base with `shop`, UUID primary key and timestamps.
+- Primary keys are server-generated UUIDv7 (time-ordered): use the standard library's `uuid.uuid7` if the Python version has it, otherwise a small library.
+- `USE_TZ = True`, store UTC. Show times in the shop's time zone.
+- Use `transaction.atomic` for every operation that changes stock, money or ledgers. Lock rows with `select_for_update` when updating `stock_levels` or `number_sequences`.
+- Django has no native composite foreign key. Enforce "same shop" references with database constraints in migrations and cover them with tests.
+- RLS policies, partial indexes and constraints Django cannot express go in migrations with `RunSQL` (with a reverse).
+- Never edit a migration that has been applied or committed. Add a new one.
+- Every new tenant table needs: `shop_id`, an RLS policy in its migration, an index starting with `shop_id`, and a cross-tenant isolation test.
+- User-facing text is translatable (Bangla `bn` and English `en`). Names that appear on receipts have `name` and `name_bn`.
+
+## API conventions (DRF)
+
+- Use DRF serializers and viewsets. Keep business logic in each app's `services.py`, not in views or serializers.
+- Money and quantity fields stay `DecimalField` and are serialized as strings. Do not switch them to floats.
+- Filtering uses django-filter `FilterSet` classes. Keep filter and serializer querysets scoped to the current shop.
+- Choose pagination deliberately for large lists. Prefer cursor pagination for append-only tables (sales, stock movements, ledgers).
+- Document every endpoint with drf-spectacular. Regenerate the OpenAPI schema and commit it whenever the API changes.
+- Tenant context must be set inside a transaction (`ATOMIC_REQUESTS` or a shared base view). Celery tasks and management commands must set the shop context themselves.
+- Configure CORS only if a client is served from a separate domain. The Next.js proxy setup does not need it.
+
+## Authentication (see `docs/DECISIONS.md`, D-020)
+
+- Sessions are opaque random tokens. Store only the SHA-256 hash in `auth_sessions.token_hash`. Never store or log the raw token.
+- Use a custom DRF authentication class. It reads the token (cookie or `Authorization: Bearer`), looks up the session and rejects it if revoked, expired, or if the user, membership or shop is not active. Then it sets the shop context for RLS.
+- A new session has no shop context. It may only list the user's shops and select a context. Selecting a context sets membership, branch and register and rotates the token.
+- Web: httpOnly, Secure, SameSite cookie set through the Next.js proxy, with CSRF protection on unsafe methods. Never put the token in localStorage.
+- Revoke by setting `revoked_at`. Removing a membership, suspending a shop or disabling a user must make their sessions fail on the next request.
+- Throttle login and PIN endpoints. Do not cache sessions at first (it delays revocation).
+- `auth_sessions` is a global table with no shop-based RLS.
+
+## Deferred: do not build, do not delete the design
+
+- **Offline sync.** Not now. Keep submissions idempotent so it can be added later.
+- **SMS and email sending.** Not now. `notification_logs` stays in the design but is **not created in the first migration**. In-app `notifications` for staff are in scope.
+- **Restaurant mode, fiscal device (EFD/SDC) integration, e-commerce sync.** Not defined yet.
+- **Two-factor authentication** was removed from the design.
+
+## Commands
+
+Run from `backend/`. Update these once the project is scaffolded; the `make` targets in the layout above arrive with task B1-00.
+
+```bash
+python manage.py runserver          # dev server
+python manage.py makemigrations     # create migrations
+python manage.py migrate            # apply migrations
+python manage.py test               # run tests
+python manage.py spectacular --file schema.yml   # regenerate the OpenAPI schema (committed as backend/schema.yml)
+```
+
+## How to work
+
+- For changes across several files or any schema change, state a short plan first, then implement.
+- Prefer small, reviewable changes. One concern per change.
+- Write or update tests with the code. Tenant-isolation and stock/ledger correctness tests matter most.
+- Ask when a requirement is unclear or the docs have an open question (`docs/REQUIREMENTS.md`, section 11). Do not guess business rules.
+- **Task workflow.** When asked "I am <LANE>. Do <TASK-ID>.", open that task in `docs/tasks/<LANE>.md`, read its Depends, gates and the docs it points to, and do **only that task**. Mark it `[~]` when you start and `[x]` when it is merged, and add one line to that file's Log (date, task, what changed, notes for the next task). If the task is blocked, say so and stop.
+- Work on a short branch per task and open a pull request. Do not push to `main`.
+- When a gate in `docs/PLAN.md` (section 3) is answered, update its State and record the answer in `docs/DECISIONS.md`.
+- Documentation is in English. Keep it concise.

@@ -1,6 +1,10 @@
-# POS System: Requirements Document (Refactored v2.0)
+# POS System: Requirements Document (English, refactored v2.0)
 
-**Companion documents:** `POS_ER_Diagram.md` (data model), `POS_Data_Dictionary.md` (tables and columns)
+**Based on:** `POS_System_Requirements_BN.md` (Oct 4, 2026, @ODCL)
+**Status:** Draft for review
+**Companion documents:** `ER-DIAGRAM.md` (data model), `DATA-DICTIONARY.md` (tables and columns)
+
+This version keeps every requirement from the original document (same FR/NFR codes) and updates it for the decisions made since:
 
 - The system is **multi-shop and multi-branch from the start** (one backend for any shop type).
 - **Offline sync is deferred.**
@@ -65,7 +69,8 @@ The system manages sales, stock, payments and basic business records for shops i
 | Item | Decision |
 |---|---|
 | Multi-shop and multi-branch | **In scope from day one** at the data and backend level. Branch and cross-shop screens arrive in Phase 3. |
-| Offline mode and sync (NFR-03) | **Deferred.** The design stays offline-friendly (client-generated IDs, duplicate-safe submissions) so it can be added later. |
+| Launch scope | **All shop types before going to market.** There is no first-customer shop type. Launch (v1.0) requires Phases 1 and 2 complete for the generic, grocery, pharmacy and clothing presets. See section 9. |
+| Offline mode and sync (NFR-03) | **Deferred.** The design stays offline-friendly (duplicate-safe submissions; client-supplied IDs can be allowed when sync is built) so it can be added later. |
 | SMS and email sending | **Deferred.** The messaging design is kept so it can be added later. Customer and shop phone and email fields stay. |
 | Two-factor authentication | **Removed.** Security relies on strong passwords, lockout and per-shop PINs. |
 | In-app alerts for staff | **In scope** (low stock, expiry, overdue dues, shift cash difference). |
@@ -124,6 +129,7 @@ Each shop has its own roles. The default roles are below. The owner can create n
 - When an action needs manager approval, the manager can approve it on the cashier's screen by entering their PIN. Both the requester and the approver are recorded.
 - The screen locks automatically after a period of inactivity.
 - The shop context (which shop's data a request touches) is always taken from the user's verified membership and session, never from a value sent by the client.
+- Sessions are server-side and can be revoked immediately, for example when a member is removed, a shop is suspended, a user is disabled or a device is lost.
 
 ---
 
@@ -137,6 +143,7 @@ The backend is identical for every shop type. A shop's type only selects default
 | FR-CFG-02 | Features are switched on or off per shop: batch and expiry, variants, weight-based items, combos, credit sales, loyalty | MVP |
 | FR-CFG-03 | Each shop can define its own custom product fields (for example generic name for a pharmacy, fabric for clothing) without any database or backend change | MVP |
 | FR-CFG-04 | Adding a new shop from the admin panel needs no backend change; only the frontend may need adjusting for a new type | MVP |
+| FR-CFG-05 | Complete presets for generic, grocery, pharmacy and clothing shops are available at launch, and each passes its end-to-end acceptance scenario (section 9) | Launch |
 
 Examples of what a preset turns on:
 
@@ -169,6 +176,7 @@ Each requirement has a code for use in development and testing. **Phase** shows 
 | FR-S-10 | Receipt can be printed in Bangla and English | MVP |
 | FR-S-11 | Find an old bill and reprint it, marked as a duplicate copy | MVP |
 | FR-S-12 | A whole bill can be completed with keyboard shortcuts, without a mouse | MVP |
+| FR-S-13 | A completed bill can be voided only while its shift is still open, with manager approval and a reason. A void reverses stock and payments with new entries and never deletes anything. After the shift closes, corrections are made by a return (FR-R-01). | MVP |
 
 ### 5.2 Payments
 
@@ -308,7 +316,7 @@ The data model supports branches and shops from the MVP, so these screens can be
 |---|---|---|
 | NFR-01 | Speed | An item appears in the cart within 1 second of a scan. A bill is completed and printed within 3 seconds. |
 | NFR-02 | Speed | Search results appear within 1 second across 50,000 products |
-| NFR-03 | Offline | **Deferred.** Selling without internet, with automatic sync later, is not in this version. The design is kept offline-friendly (client-generated IDs and duplicate-safe submissions). |
+| NFR-03 | Offline | **Deferred.** Selling without internet, with automatic sync later, is not in this version. The design is kept offline-friendly (duplicate-safe submissions; client-supplied IDs can be allowed when sync is built). |
 | NFR-04 | Reliability | Cloud uptime of at least 99.5%. A bill in progress must not be lost on a sudden power cut or page refresh. |
 | NFR-05 | Security | Passwords are stored hashed. All data in transit is encrypted with HTTPS/TLS. |
 | NFR-06 | Security | An account is temporarily locked after 5 wrong login attempts. A PIN is temporarily locked after repeated wrong attempts. *(Two-factor authentication for owners was removed.)* |
@@ -377,7 +385,12 @@ A normal sale is completed in 8 steps, and the whole process should take under 3
 
 ## 9. Phased plan and acceptance criteria
 
-The first phase builds only the core needed to run sales in one shop, on top of a data foundation that already supports many shops and branches. The rest follows in later phases.
+The product goes to market only when it supports **all shop types** (generic, grocery, pharmacy, clothing). So the phases below are **development stages, not launch stages**:
+
+- **Launch (v1.0) = Phase 1 + Phase 2, complete.** This includes variants, batch and expiry, weight-based items, unit conversion, combos, returns, customers and credit, purchasing, promotions, VAT report, expenses and in-app alerts, because each shop type needs some of them.
+- **Phase 3 is after launch**, unless the project owner moves items into launch. Whether branch operations (stock transfer FR-I-06, branch restriction FR-T-05) are part of launch is still open.
+- **Build order inside launch:** foundation first (tenancy, auth, catalog core), then the generic preset as the reference, then enable and test each module for grocery, pharmacy and clothing.
+- **Launch-risk items to check with real shops before launch:** whether offline selling (deferred) and fiscal device support (EFD/SDC, NBR) are required in practice.
 
 | Phase | Included | Estimated time |
 |---|---|---|
@@ -403,6 +416,16 @@ The first phase builds only the core needed to run sales in one shop, on top of 
 - A bill in progress survives a page refresh or a power cut.
 - Submitting the same sale twice creates only one bill.
 
+### Acceptance criteria (launch, per shop type)
+
+Each preset must pass its end-to-end scenario on the same backend with no shop-type code changes.
+
+- **Generic:** create products, sell with cash and MFS, take a return, close the shift, and see correct sales and stock reports.
+- **Grocery:** sell a weighed item (for example 1.25 kg), sell by the piece and by the carton from one product (unit conversion), scan a barcode, and sell a combo that reduces each component's stock.
+- **Pharmacy:** receive stock with batch and expiry, sell with first-expiring-first-out, get an expiry alert, record an expired-stock adjustment, and see the expiry report.
+- **Clothing:** create a product with size and colour variants and separate stock and price, sell and return a variant, and see stock per variant.
+- **All types:** each shop type's custom product fields appear without any backend change.
+
 ---
 
 ## 10. Architecture constraints
@@ -415,8 +438,10 @@ These are decisions that affect how the requirements are built.
 | Database | **One shared database and schema.** Every shop-owned table carries `shop_id` (and `branch_id` where relevant). Isolation is enforced by PostgreSQL row-level security, with a least-privilege application role. |
 | Shop types | Controlled by configuration (presets, feature flags, custom fields), not by code branches |
 | Stock and balances | Append-only ledgers; cached balances can be rebuilt from them |
-| Identifiers | Time-ordered UUIDs. Sales and payments can be created with client-generated IDs, so retries are safe. |
+| Identifiers | Time-ordered UUIDs generated by the server. Retries are safe through a per-shop idempotency key on sales. |
 | Reports | Queries over the main tables. Summary tables or read replicas are added only if volume requires it. |
+| Frontend | Next.js. It proxies API calls to the backend. |
+| API authentication | Server-side sessions with opaque tokens (database-backed, revocable). Not JWT. |
 | Deferred features | Designed but not built: offline sync, SMS and email sending |
 
 ---
@@ -432,6 +457,7 @@ These are decisions that affect how the requirements are built.
 7. **Rosters.** Are planned shift schedules needed, or are actual shifts enough?
 8. **Restaurant support.** Is it in scope later (it needs a module with tables, kitchen orders and modifiers), or not at all?
 9. **Phase assignments.** Please confirm the proposed phase for each requirement in section 5.
+10. **VAT rounding.** Is VAT rounded per line or per bill? This must be fixed before tax code is written.
 
 ---
 
@@ -457,3 +483,5 @@ These are decisions that affect how the requirements are built.
 | Non-functional | New NFR-14 (tenant isolation), NFR-15 (data integrity), NFR-16 (duplicate safety), NFR-17 (auditability). NFR-07 adds per-shop export. |
 | Phases | Added a phase column per requirement. Phase 1 now includes the tenancy foundation, and no longer includes offline mode. SMS moved out of Phase 2 into Deferred. |
 | Acceptance | Removed the offline test. Added tenant isolation, multi-shop cashier, shift rules, owners, new-shop, draft-bill and duplicate tests. |
+| Launch scope | Added: launch requires Phases 1 and 2 for all shop types (FR-CFG-05, per-shop-type acceptance scenarios). Phases are development stages, not launch stages. |
+| Voids and IDs | Added FR-S-13 (void only while the shift is open). Identifiers are generated by the server, with a per-shop idempotency key for retry safety. |
