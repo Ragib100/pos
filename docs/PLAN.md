@@ -1,6 +1,6 @@
 # Plan
 
-The planned order of work from an empty repository to launch, for the four-person team (two backend, two frontend). Checkboxes live **only** in each member's file (`docs/tasks/<LANE>.md`). This page shows the order, the dependencies, the gates (with their state) and the exit criteria. A milestone is done when all four of its tasks are ticked in the task files.
+The planned order of work from an empty repository to launch, for the four-person team (two backend, two frontend). Task status is tracked in **GitHub Issues and the GitHub Project** (one issue per task ID); the task files (`docs/tasks/<LANE>.md`) hold the specification. This page shows the order, the dependencies, the gates (with their state) and the exit criteria. A milestone is done when all four of its task issues are closed in the GitHub Project.
 
 **Launch scope (D-021):** Phases 1 and 2 of `REQUIREMENTS.md` complete for all four shop-type presets (generic, grocery, pharmacy, clothing). Phase 3 and the deferred items come after launch (section 10).
 
@@ -27,7 +27,8 @@ Hardware work (printers, scanner, cash drawer, scale) belongs to FE1 with BE1 su
 
 - **Contract first.** Before a backend endpoint group is built, BE publishes its OpenAPI schema (drf-spectacular, committed). FE generates its API client from it and works against a mock until the real endpoint lands. A contract change needs a heads-up to the other lane and a schema update in the same pull request.
 - **Cross-review.** BE1 and BE2 review each other's migrations and RLS policies. FE1 and FE2 review each other's shared components. At least one review per pull request.
-- **Definition of done** for every task: code, tests, OpenAPI schema updated, docs updated (`ER-DIAGRAM.md`, `DATA-DICTIONARY.md`, `DECISIONS.md` where relevant), and the task ticked in your file with a Log line.
+- **Integration:** one short branch per task off `main`, merged by pull request after review and a green CI. CD deploys from `main`; frontend and backend deploy independently (D-022).
+- **Definition of done** for every task: code, tests, OpenAPI schema updated, docs updated (`ER-DIAGRAM.md`, `DATA-DICTIONARY.md`, `DECISIONS.md` where relevant), and the pull request closing the task's GitHub issue.
 - **CI gates:** tests pass, every shop-owned table has RLS enabled and forced, no app imports another app's models, schema file is up to date, lint passes.
 - **Every new tenant table** ships with its RLS policy, a `shop_id`-first index and a cross-shop isolation test (see `CLAUDE.md`).
 - **Demo at the end of each milestone.** The exit criteria below are the demo script.
@@ -39,18 +40,18 @@ These open questions block specific milestones. Answer them before the milestone
 
 | Gate | Question | Needed before | State |
 |---|---|---|---|
-| G1 | Next.js rendering mode and UI libraries | M0 (FE) | open |
-| G2 | Confirm: one shop is one legal entity with one BIN; PIN is per shop; customers are per shop; session lifetime and idle-timeout values | M1 | open |
-| G3 | Default negative-stock policy. Are branch operations (stock transfer FR-I-06, branch restriction FR-T-05, cross-shop owner view FR-T-08, FR-B-01 to FR-B-03) part of launch? | M3 | open |
-| G4 | VAT rounding rule (per line or per bill). Bill number format and reset rule | M5 | open |
-| G5 | Delivery format for Windows desktop and Android tablet (browser, installable web app or wrapper) and the receipt-printing approach (browser print, local print agent, or other) | M6 | open |
-| G6 | Launch-risk check with real shops: is offline selling required, and is fiscal device (EFD/SDC) support required? Start talking to shops from M5 | M14 | open |
+| G1 | Next.js rendering mode and UI libraries | M0 (FE) | answered (D-023); UI library: shadcn/ui |
+| G2 | Confirm: one shop is one legal entity with one BIN; PIN is per shop; customers are per shop; session lifetime and idle-timeout values | M1 | answered (D-024) |
+| G3 | Default negative-stock policy. Are branch operations (stock transfer FR-I-06, branch restriction FR-T-05, cross-shop owner view FR-T-08, FR-B-01 to FR-B-03) part of launch? | M3 | answered (D-025) |
+| G4 | VAT rounding rule (per line or per bill). Bill number format and reset rule | M5 | answered (D-026): branch and register bill numbers; VAT rounded once per bill, half up to a whole taka |
+| G5 | Delivery format for Windows desktop and Android tablet (browser, installable web app or wrapper) and the receipt-printing approach (browser print, local print agent, or other) | M6 | answered (D-027); validate on a real printer at the start of F1-06 |
+| G6 | Launch-risk check with real shops: is fiscal device (EFD/SDC) support required? Offline selling is out of scope (D-028). Start talking to shops from M5 | M14 | open |
 
 Mark a gate **answered** in the State column when it is decided, and record the answer in `DECISIONS.md`.
 
 **Known risks**
 - No code exists yet, so the design is untested. Expect small changes to the docs during M0 to M2.
-- Offline selling is deferred. It may turn out to be launch-blocking where internet is unreliable (G6).
+- Offline selling is out of scope (D-028). Selling needs an internet connection, so shops with unreliable internet are outside the launch audience.
 - Constraints that Django cannot express (RLS, "same shop" references, ledger protection) live in raw SQL migrations and need careful review.
 - Task sizes are estimates until M0 gives real velocity.
 
@@ -213,15 +214,15 @@ These are the demo scripts for the end of each milestone. Work per member is in 
 **Goal:** safe to put in front of paying shops.
 **Depends on:** M13, G6. **Requirements:** NFR-01, 02, 07, 08, 09, 10, 12, 13.
 **Exit criteria:** all MVP and launch acceptance criteria in `REQUIREMENTS.md` section 9 pass. Load targets are met. A restore drill and a per-shop export succeed. UAT sign-off from at least one real shop per preset.
-**All members:** user acceptance testing with real shops of each type, fixes, and the G6 decisions on offline selling and fiscal device support.
+**All members:** user acceptance testing with real shops of each type, fixes, and the G6 decision on fiscal device support.
 **Tasks:** [B1-14](tasks/BE1.md), [B2-14](tasks/BE2.md), [F1-14](tasks/FE1.md), [F2-14](tasks/FE2.md)
 
 ## 8. Team tasks (Wave 6)
 
-- [ ] **TM-01** Fresh-clone check: on a different PC, clone the repo and run the setup from `SETUP.md`; the stack must start from zero and the smoke script below must pass · lead **BE1**
-- [ ] **TM-02** Evidence: record the isolation, load, restore and failure-matrix results in `docs/results/` (create the folder when the first evidence exists; the failure matrix is in `ARCHITECTURE.md`) · lead **BE2**
-- [ ] **TM-03** User acceptance with real shops, one per preset (generic, grocery, pharmacy, clothing) · lead **FE2**
-- [ ] **TM-04** Demo and training material: rehearse the smoke script and write the 30-minute cashier training guide · lead **FE1**
+- **TM-01** Fresh-clone check: on a different PC, clone the repo and run the setup from `SETUP.md`; the stack must start from zero and the smoke script below must pass · lead **BE1**
+- **TM-02** Evidence: record the isolation, load, restore and failure-matrix results in `docs/results/` (create the folder when the first evidence exists; the failure matrix is in `ARCHITECTURE.md`) · lead **BE2**
+- **TM-03** User acceptance with real shops, one per preset (generic, grocery, pharmacy, clothing) · lead **FE2**
+- **TM-04** Demo and training material: rehearse the smoke script and write the 30-minute cashier training guide · lead **FE1**
 
 ### Smoke script (also used for regression testing)
 
@@ -242,7 +243,10 @@ Every launch requirement from `REQUIREMENTS.md` has a milestone.
 | Requirements | Milestone |
 |---|---|
 | FR-T-01 to 04, 06, 09, 10 | M1 |
+| FR-T-05 | M1 |
 | FR-T-07 | M4 |
+| FR-B-01, 02 | M1 (branches, registers, member restriction), M2 (branch prices), M3 (branch stock) |
+| FR-B-03 (per branch) | M7, M12 (branch filters on reports) |
 | FR-CFG-01 to 04 | M1 (presets seeded), M2 (custom fields) |
 | FR-CFG-05 | M13 |
 | FR-S-01 to 06, 12, 13 | M5 |
@@ -274,16 +278,16 @@ Every launch requirement from `REQUIREMENTS.md` has a milestone.
 
 | Item | Notes |
 |---|---|
-| Branch operations: FR-T-05, FR-T-08, FR-I-06, FR-B-01 to 03, FR-ST-06 | Moves into launch if gate G3 says so. The data model already supports it. |
+| Stock transfers (FR-I-06), the cross-shop owner view (FR-T-08), branch overrides of settings (FR-ST-06) | Post-launch (D-025). Per-branch stock, prices, member restriction and per-branch reports are in launch. |
 | FIFO stock valuation (FR-I-08) | Phase 3 |
 | Owner mobile app, e-commerce and accounting integration, advanced analytics | Phase 3 |
 | SMS and email sending (FR-N-02) | Deferred (D-015). First candidate to split into its own service. |
-| Offline selling and sync (NFR-03) | Deferred (D-014). Re-check with G6. |
+| Offline selling and sync (NFR-03) | Out of scope until after launch (D-028). |
 | Fiscal device integration (NFR-12) | Prepared only. Re-check with G6. |
 | Restaurant module | Not defined |
 
 ## 11. Keeping this plan current
 
-- Change this file only when scope, order, gates or ownership change. Task progress goes in the task files.
+- Change this file only when scope, order, gates or ownership change. Task progress is tracked in GitHub Issues and the GitHub Project.
 - When a gate is answered, record the answer in `DECISIONS.md` and mark the gate answered in section 3.
 - After M0, re-estimate sizes with real velocity and update section 5 and the sizes in the task files.

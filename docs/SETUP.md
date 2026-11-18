@@ -46,6 +46,8 @@ Secrets are generated for you in `.env`. Never commit `.env`; `.env.example` lis
 
 Work on a **short branch per task** and merge through a pull request (a change from the hackathon setup, where everyone worked on `main`; see `DECISIONS.md`, D-022).
 
+**Start from the issue.** Every task ID has a GitHub issue (title `B1-05 · ...`) in the GitHub Project, with a milestone (M0 to M14) and a lane label. Assign it to yourself and move it to In progress before you branch. The pull request says `Closes #<issue number>`.
+
 ```
 git pull                                  # 1. get teammates' latest work
 git switch -c b1-05-sale-transaction      # 2. branch named after the task ID
@@ -54,12 +56,12 @@ claude                                    # 3. open Claude Code, then type:  I a
 git push -u origin HEAD                   # 4. push and open a pull request
 ```
 
-5. Another member reviews. Merge when CI is green. In the same pull request the task is ticked `[x]` in your file under `docs/tasks/` and a line is added to its Log.
+5. Another member reviews. Merge when CI is green. The pull request closes the task's issue, and a line is added to the task file's Log if the next task needs a note.
 6. Tell the group: "B1-05 merged". For the next task, type `/clear` in Claude Code (fresh context, fewer tokens), then go back to step 1.
 
 **Reviews:** BE1 and BE2 review each other's migrations and RLS policies. FE1 and FE2 review each other's shared components. At least one review per pull request.
 
-**Before you start a task**, check that its `Depends` milestones are done (all four tasks of each are ticked in `tasks/`) and that any gate it lists is answered (`PLAN.md`, section 3). Frontend tasks can start from the OpenAPI schema and a mock before the backend endpoints exist.
+**Before you start a task**, check that its `Depends` milestones are done (all four task issues of each are closed in the GitHub Project) and that any gate it lists is answered (`PLAN.md`, section 3). Frontend tasks can start from the OpenAPI schema and a mock before the backend endpoints exist.
 
 ## D. What every pull request must pass
 
@@ -82,3 +84,11 @@ git push -u origin HEAD                   # 4. push and open a pull request
 | CI says "schema out of date" | run `make schema` and commit the result |
 | Claude says a task is blocked | its `Depends` milestone is not done yet. Pick your next unblocked task, or build against the mock |
 | Want an older version back | use the release tag: `make deploy VERSION=<tag>` (added in M14) |
+
+## F. Tracking tasks (GitHub)
+
+- One GitHub **issue per task ID**, titled `B1-05 · Sales, payments and the sale transaction`, with the task file's steps linked in the description.
+- **Milestones M0 to M14** match the plan. **Labels** `BE1`, `BE2`, `FE1`, `FE2` mark the lane.
+- The **GitHub Project** board has the columns Todo, In progress, In review and Done. A pull request moves its issue to In review, and merging closes it.
+- Task B1-00 creates the Project, milestones, labels and issues (a script can read `docs/tasks/`).
+- The task files in `docs/tasks/` stay the specification. Status lives only in GitHub.

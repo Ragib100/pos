@@ -1,6 +1,6 @@
 # BE2 · Catalog, stock and back office
 
-Owns: `backend/apps/catalog/**`, `backend/apps/inventory/**`, `backend/apps/customers/**`, `backend/apps/purchasing/**`, `backend/apps/reports/**`, `scripts/**`. Touch another lane's code only for a task listed in your file, and have that lane's owner review it.
+Maintains: `backend/apps/catalog/**`, `backend/apps/inventory/**`, `backend/apps/customers/**`, `backend/apps/purchasing/**`, `backend/apps/reports/**`, `scripts/**`. Anyone else changes this code through a pull request that you review. In other lanes' code, change only what a task in your file needs, and have its maintainer review it.
 Start a task: open Claude Code in the repo folder and type **`I am BE2. Do B2-00.`** (replace `BE2` with your name once the team is assigned). Total: 15 tasks, one per milestone. `[ ]` = todo, `[~]` = in progress, `[x]` = merged to main.
 Sizes are relative (S, M, L) and will be re-estimated after M0. Support tasks are one step smaller than their milestone.
 Frontend tasks build against **mocks generated from the OpenAPI schema** until the matching backend task is merged. Backend tasks publish the schema for their endpoints before building them (`CONTRACTS.md`).
@@ -28,6 +28,7 @@ Size L · Milestone M1 (Identity, tenancy and admin) · Depends: M0 · Unblocks:
 - `shops.enabled_modules` and settings APIs.
 - Permission catalog and default roles per shop.
 - Shop details (name, logo, BIN, phone, email).
+- Preset stock policy: pharmacy sets `block`, the other presets `warn_allow` (D-025).
 - **API operations:** section 4.1 to 4.4 of `API.md`. Publish the schema for them before building.
 - **Done when:** your part of the M1 exit criteria passes (see `PLAN.md`), tests are green, the OpenAPI schema is current, and the docs are updated.
 

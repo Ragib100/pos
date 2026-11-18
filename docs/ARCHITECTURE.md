@@ -29,14 +29,14 @@ flowchart LR
 - The browser talks **only to Next.js**, which forwards API calls to Django. No CORS for the web app.
 - Native clients (Android tablet, owner mobile app) call Django directly with a Bearer token.
 - Redis and Celery arrive with the first background job (M12). Dotted lines are not part of the MVP.
-- Hardware (printers, scanner, drawer, scale) connects at the counter. The printing approach is decided at gate G5.
+- Hardware (printers, scanner, drawer, scale) connects at the counter. Receipts, drawer and cutter go through a small local print service, or WebUSB where supported (D-027).
 - External services: MFS (bKash, Nagad, Rocket) start as a manually entered transaction ID. SMS and email are deferred.
 
 ## 2. Modules
 
 One Django project, one deployable. Each domain is a Django app under `backend/apps/`.
 
-| App | Owns these tables | Lane |
+| App | Owns these tables | Maintainer |
 |---|---|---|
 | `accounts` | users, shop_types, shops, branches, registers, roles, permissions, role_permissions, memberships, membership_branches, auth_sessions, shifts, cash_movements, z_reports, notifications, number_sequences (16) | BE1 |
 | `catalog` | categories, brands, units, tax_rates, attribute_definitions, products, product_variants, variant_barcodes, unit_conversions, combo_items, branch_variants (11) | BE2 |
@@ -65,6 +65,19 @@ Rules (checked in CI):
 - No app imports another app's views or serializers.
 - Foreign keys between apps are allowed (for example `sale_items.variant_id`).
 - The `shop_id` and `branch_id` of any related object must match (enforced by database constraints, see D-017).
+
+**Other modules and maintainers** (one designated maintainer each; anyone may change a module through a pull request, and its maintainer reviews it):
+
+| Module | Where | Maintainer |
+|---|---|---|
+| Terminal screens | `frontend/src/app/(terminal)` | FE1 |
+| Admin screens | `frontend/src/app/(admin)` | FE2 |
+| Shared UI components and design tokens | `frontend/` shared package | FE2 |
+| API contract (OpenAPI schema and generated types) | `contracts/` | BE2 |
+| Infrastructure, CI/CD, deployment files | `infra/`, `.github/workflows/` | BE1 |
+| Load tests | `loadtest/` | BE1 |
+| Helper and data scripts | `scripts/` | BE2 |
+| Docs | `docs/` | whoever maintains the related module updates its docs |
 
 ## 3. Request lifecycle
 
@@ -116,7 +129,7 @@ What should happen when something fails. Each row needs evidence (a test, a scre
 
 | # | Failure | Expected behaviour | Proven in |
 |---|---|---|---|
-| 1 | Network drops mid-bill (offline is deferred) | The bill in progress stays on the device, the cashier sees a clear message, and can resume. No duplicate on retry. | F1-05, F1-14 |
+| 1 | Network drops mid-bill | The bill in progress stays on the device, the cashier sees a clear message, and can resume. No duplicate on retry. | F1-05, F1-14 |
 | 2 | The same sale is submitted twice | One sale only (`client_request_id` unique per shop) | B1-05 |
 | 3 | Browser refresh or power cut mid-bill | The draft bill is restored | F1-05, F1-14 |
 | 4 | Two cashiers sell the last unit at once | Stock follows the negative-stock policy and the ledger stays consistent | B2-05, B1-05 |
@@ -134,6 +147,7 @@ What should happen when something fails. Each row needs evidence (a test, a scre
 
 Not decided yet: hosting provider and topology. Planned shape:
 - Environments: development (Docker on each PC), staging and production.
-- CI runs tests and the repository checks on every pull request (see `SETUP.md`, section D).
+- The frontend and the backend are built, versioned and deployed **independently** (D-022). The committed OpenAPI contract keeps them compatible: every API change is backward compatible, or uses a new path version. For an additive change, deploy the backend first, then the frontend.
+- CI (tests and repository checks, see `SETUP.md`, section D) runs on every pull request, with path filters so a frontend-only change does not rebuild the backend, and the reverse. CD deploys from `main` automatically; the exact targets and any approval step for production are decided in M14.
 - Releases must not stop sales (NFR-13). Errors go to central logs and monitoring (M14).
 - Backups: daily, kept 30 days, with restore drills (NFR-07).

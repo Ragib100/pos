@@ -8,7 +8,7 @@
 |---|---|
 | `SETUP.md` | Install, clone, the task loop, common fixes |
 | `PLAN.md` | Milestones M0 to M14, team lanes, waves, decision gates and their state, exit criteria |
-| `tasks/BE1.md`, `BE2.md`, `FE1.md`, `FE2.md` | One file per member: task IDs, checkboxes, dependencies, Log |
+| `tasks/BE1.md`, `BE2.md`, `FE1.md`, `FE2.md` | One file per member: task IDs, dependencies, done-when, Log (status is tracked in GitHub) |
 | `REQUIREMENTS.md` | What must be built (FR/NFR codes), roles, phases, acceptance criteria, open questions |
 | `ARCHITECTURE.md` | How the parts fit, which app owns which table, the failure matrix |
 | `CONTRACTS.md` | API conventions and the error format (the OpenAPI schema is the source of truth) |
@@ -25,6 +25,6 @@ Evidence for launch (isolation, load, restore, UAT) goes in `results/`, created 
 - **Codes are stable.** FR/NFR codes and task IDs (`B1-05`) are referenced from code, tests and commits. Do not renumber.
 - **Docs and code change together.** A change to a table, rule or decision updates the matching doc in the same pull request.
 - **Decisions are recorded.** Replace a decision with a new entry and mark the old one superseded. Never delete entries.
-- **Checkboxes live only in the task files.**
+- **Task status lives in GitHub Issues and the Project**, not in the docs.
 - **One table list.** `ER-DIAGRAM.md`, `DATA-DICTIONARY.md` and the module map in `ARCHITECTURE.md` must always name the same tables. Columns live only in `DATA-DICTIONARY.md`.
 - **English only.** Bangla appears only as example data or interface text.

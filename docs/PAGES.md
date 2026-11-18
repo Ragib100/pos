@@ -163,7 +163,7 @@ Who: owner · Task F2-01 (modules F2-13) · M1 · FR-ST-02 to 04, FR-CFG-02, FR-
 
 | Part | Input | Output | API call |
 |---|---|---|---|
-| Settings form | Rounding rule, VAT rounding (per line or per bill, once decided), service charge percent, return days, negative-stock policy, loyalty rule, digit style, bill number format | Current values | `settings.get` on load; `settings.update` on save |
+| Settings form | Rounding rule, service charge percent, return days, negative-stock policy, idle lock minutes, loyalty rule, digit style, bill number format | Current values | `settings.get` on load; `settings.update` on save |
 | Module switches | Turn on or off: batch and expiry, variants, weighted items, combos, credit sales, loyalty | Current switches; menus change after save | `settings.modules_update` on save; then `auth.me` reload |
 | Links | Click | Tax rates (PG-20), payment methods (PG-48), receipt format (PG-44) | none |
 
@@ -356,7 +356,7 @@ Who: manager, stock keeper · Task F2-03 · M3 · FR-I-05
 | Complete button | Click; manager PIN if asked | Corrections posted; count closed | `counts.complete` on click (approval dialog on `APPROVAL_REQUIRED`) |
 
 ### PG-31 · Stock transfers · `/admin/stock/transfers`
-Who: manager, owner · Task F2-03 · M3 · FR-I-06 (only if gate G3 includes branch operations in launch)
+Who: manager, owner · Task F2-03 · M3 · FR-I-06 (post-launch, D-025)
 
 | Part | Input | Output | API call |
 |---|---|---|---|

@@ -7,7 +7,7 @@
 This version keeps every requirement from the original document (same FR/NFR codes) and updates it for the decisions made since:
 
 - The system is **multi-shop and multi-branch from the start** (one backend for any shop type).
-- **Offline sync is deferred.**
+- **Offline selling and sync are out of scope until after launch.**
 - **SMS and email sending are deferred.**
 - **Two-factor authentication is removed.**
 
@@ -70,7 +70,7 @@ The system manages sales, stock, payments and basic business records for shops i
 |---|---|
 | Multi-shop and multi-branch | **In scope from day one** at the data and backend level. Branch and cross-shop screens arrive in Phase 3. |
 | Launch scope | **All shop types before going to market.** There is no first-customer shop type. Launch (v1.0) requires Phases 1 and 2 complete for the generic, grocery, pharmacy and clothing presets. See section 9. |
-| Offline mode and sync (NFR-03) | **Deferred.** The design stays offline-friendly (duplicate-safe submissions; client-supplied IDs can be allowed when sync is built) so it can be added later. |
+| Offline mode and sync (NFR-03) | **Out of scope until after launch** (D-028). No preparation work. Selling needs an internet connection; a bill in progress is kept in the browser if the connection drops. |
 | SMS and email sending | **Deferred.** The messaging design is kept so it can be added later. Customer and shop phone and email fields stay. |
 | Two-factor authentication | **Removed.** Security relies on strong passwords, lockout and per-shop PINs. |
 | In-app alerts for staff | **In scope** (low stock, expiry, overdue dues, shift cash difference). |
@@ -99,7 +99,7 @@ The system manages sales, stock, payments and basic business records for shops i
 | FR-T-02 | A shop can have several owners. The system must never allow a shop to be left with no active owner. | MVP |
 | FR-T-03 | The platform admin can create, suspend and reactivate shops, choose the shop type, and assign the first owner | MVP |
 | FR-T-04 | Shop data is strictly isolated. No user can read or change another shop's data, and this is enforced at the database level, not only in the app. | MVP |
-| FR-T-05 | A membership can be limited to selected branches | Phase 3 |
+| FR-T-05 | A membership can be limited to selected branches | Phase 2 |
 | FR-T-06 | After login the user chooses shop, branch and register from the ones they are allowed to use. The choice fixes the working context of the session. | MVP |
 | FR-T-07 | Only one open shift per user at a time, and only one open shift per register | MVP |
 | FR-T-08 | An owner of several shops can switch between them, see each shop's reports, and see a combined report across their shops | Phase 3 |
@@ -168,7 +168,7 @@ Each requirement has a code for use in development and testing. **Phase** shows 
 | FR-S-02 | Increase or decrease item quantity and remove items in the cart | MVP |
 | FR-S-03 | Weight-based items accept decimal quantities (for example 1.25 kg) | MVP |
 | FR-S-04 | Discount on an item or on the whole bill, as an amount or a percentage | MVP |
-| FR-S-05 | VAT and service charge are calculated automatically | MVP |
+| FR-S-05 | VAT and service charge are calculated automatically. The bill's total VAT is rounded once per bill, half up to a whole taka: a fraction below 0.5 rounds down, otherwise up (D-026). | MVP |
 | FR-S-06 | Hold a bill, start a new one, and recall the held bill later | MVP |
 | FR-S-07 | Attach a customer to a bill (search by mobile number or create new) | Phase 2 |
 | FR-S-08 | Print a receipt (58 mm or 80 mm thermal). Sending by SMS or email is **deferred** (see FR-N-02). | MVP |
@@ -284,11 +284,11 @@ Customers belong to one shop and are shared by all of its branches. They are nev
 
 | Code | Requirement | Phase |
 |---|---|---|
-| FR-B-01 | Several branches are run from one central shop account | Phase 3 |
-| FR-B-02 | Each branch has its own stock and can have its own prices and users. The product catalog is shared across the shop's branches. | Phase 3 |
-| FR-B-03 | The owner sees combined and per-branch reports for each shop, and a combined view across all shops they own | Phase 3 |
+| FR-B-01 | Several branches are run from one central shop account | Phase 2 |
+| FR-B-02 | Each branch has its own stock and can have its own prices and users. The product catalog is shared across the shop's branches. | Phase 2 |
+| FR-B-03 | The owner sees combined and per-branch reports for each shop, and a combined view across all shops they own | Phase 2 (per branch), Phase 3 (across shops) |
 
-The data model supports branches and shops from the MVP, so these screens can be added without redesigning the data.
+Per-branch stock, prices, member branch restriction and per-branch reports are part of launch. Stock transfers (FR-I-06) and the combined view across shops (FR-T-08) come after launch (D-025). The data model supports all of it from the start.
 
 ### 5.12 Settings
 
@@ -316,7 +316,7 @@ The data model supports branches and shops from the MVP, so these screens can be
 |---|---|---|
 | NFR-01 | Speed | An item appears in the cart within 1 second of a scan. A bill is completed and printed within 3 seconds. |
 | NFR-02 | Speed | Search results appear within 1 second across 50,000 products |
-| NFR-03 | Offline | **Deferred.** Selling without internet, with automatic sync later, is not in this version. The design is kept offline-friendly (duplicate-safe submissions; client-supplied IDs can be allowed when sync is built). |
+| NFR-03 | Offline | **Out of scope until after launch** (D-028). Selling without internet, with automatic sync later, is not in this version and no preparation work is planned. |
 | NFR-04 | Reliability | Cloud uptime of at least 99.5%. A bill in progress must not be lost on a sudden power cut or page refresh. |
 | NFR-05 | Security | Passwords are stored hashed. All data in transit is encrypted with HTTPS/TLS. |
 | NFR-06 | Security | An account is temporarily locked after 5 wrong login attempts. A PIN is temporarily locked after repeated wrong attempts. *(Two-factor authentication for owners was removed.)* |
@@ -388,9 +388,9 @@ A normal sale is completed in 8 steps, and the whole process should take under 3
 The product goes to market only when it supports **all shop types** (generic, grocery, pharmacy, clothing). So the phases below are **development stages, not launch stages**:
 
 - **Launch (v1.0) = Phase 1 + Phase 2, complete.** This includes variants, batch and expiry, weight-based items, unit conversion, combos, returns, customers and credit, purchasing, promotions, VAT report, expenses and in-app alerts, because each shop type needs some of them.
-- **Phase 3 is after launch**, unless the project owner moves items into launch. Whether branch operations (stock transfer FR-I-06, branch restriction FR-T-05) are part of launch is still open.
+- **Phase 3 is after launch**, unless the project owner moves items into launch. Branch basics (branches, registers, per-branch stock and prices, member branch restriction, per-branch reports) are part of launch; stock transfers (FR-I-06) and the cross-shop owner view (FR-T-08) come after launch (D-025).
 - **Build order inside launch:** foundation first (tenancy, auth, catalog core), then the generic preset as the reference, then enable and test each module for grocery, pharmacy and clothing.
-- **Launch-risk items to check with real shops before launch:** whether offline selling (deferred) and fiscal device support (EFD/SDC, NBR) are required in practice.
+- **Launch-risk items to check with real shops before launch:** whether fiscal device support (EFD/SDC, NBR) is required in practice. Offline selling is out of scope (D-028).
 
 | Phase | Included | Estimated time |
 |---|---|---|
@@ -442,22 +442,30 @@ These are decisions that affect how the requirements are built.
 | Reports | Queries over the main tables. Summary tables or read replicas are added only if volume requires it. |
 | Frontend | Next.js. It proxies API calls to the backend. |
 | API authentication | Server-side sessions with opaque tokens (database-backed, revocable). Not JWT. |
-| Deferred features | Designed but not built: offline sync, SMS and email sending |
+| Deferred features | Out of scope for now: offline selling and sync. Designed but not built: SMS and email sending |
 
 ---
 
 ## 11. Open questions
 
-1. **Legal entity.** Is one shop always one legal entity with one BIN? If an owner has several shops under one company, is an organization level above shops needed for combined VAT reporting?
-2. **Customers across shops.** Customers are kept separate per shop. Should an owner be able to share a customer list between their own shops?
-3. **PIN scope.** The PIN is per shop. Should one PIN work in every shop of the same user?
-4. **Branch pricing.** Is a per-branch price override enough, or do branches need full separate price lists?
-5. **Negative stock.** What is the default policy (block, warn or allow), and can it be set per product?
-6. **Bill number format.** What prefix per branch or register, and does numbering reset yearly or never?
-7. **Rosters.** Are planned shift schedules needed, or are actual shifts enough?
-8. **Restaurant support.** Is it in scope later (it needs a module with tables, kitchen orders and modifiers), or not at all?
-9. **Phase assignments.** Please confirm the proposed phase for each requirement in section 5.
-10. **VAT rounding.** Is VAT rounded per line or per bill? This must be fixed before tax code is written.
+**Answered** (recorded in `DECISIONS.md`):
+
+1. **Legal entity.** One shop is one legal entity with one BIN (D-024).
+2. **Customers across shops.** Kept separate per shop (D-024).
+3. **PIN scope.** Per shop (D-024).
+4. **Branch pricing.** A per-branch price override is enough (D-025).
+5. **Negative stock.** Default warn and allow, with a per-product override; the pharmacy preset blocks (D-025).
+6. **Bill number format.** Branch and register prefix, continuous, no reset (D-026).
+7. **Rosters.** Not needed (D-028).
+8. **Restaurant support.** Out of scope for now (D-028).
+9. **UI library.** shadcn/ui (D-023).
+10. **VAT rounding.** Once per bill, half up to a whole taka (D-026).
+
+**Still open:**
+
+11. **Phase assignments.** Please confirm the proposed phase for each requirement in section 5.
+12. **Fiscal device.** Is EFD/SDC support required for the target shops (gate G6)?
+13. **Receipt printing.** Validate the planned approach on a real printer at the start of F1-06 (D-027).
 
 ---
 
@@ -485,3 +493,5 @@ These are decisions that affect how the requirements are built.
 | Acceptance | Removed the offline test. Added tenant isolation, multi-shop cashier, shift rules, owners, new-shop, draft-bill and duplicate tests. |
 | Launch scope | Added: launch requires Phases 1 and 2 for all shop types (FR-CFG-05, per-shop-type acceptance scenarios). Phases are development stages, not launch stages. |
 | Voids and IDs | Added FR-S-13 (void only while the shift is open). Identifiers are generated by the server, with a per-shop idempotency key for retry safety. |
+| Gate decisions | Gates G1 to G5 answered and offline taken fully out of scope (D-023 to D-028). Branch basics moved into launch (FR-T-05, FR-B-01, FR-B-02); stock transfers (FR-I-06) and the cross-shop view (FR-T-08) stay after launch. |
+| VAT and UI | VAT is rounded once per bill, half up to a whole taka (FR-S-05, D-026), and the UI library is shadcn/ui (D-023). |

@@ -1,6 +1,6 @@
 # BE1 · Core and transactions
 
-Owns: `backend/apps/accounts/**`, `backend/apps/sales/**`, `backend/apps/promotions/**`, `backend/apps/audit/**`, project settings, CI and `infra/**`. Touch another lane's code only for a task listed in your file, and have that lane's owner review it.
+Maintains: `backend/apps/accounts/**`, `backend/apps/sales/**`, `backend/apps/promotions/**`, `backend/apps/audit/**`, project settings, CI and `infra/**`. Anyone else changes this code through a pull request that you review. In other lanes' code, change only what a task in your file needs, and have its maintainer review it.
 Start a task: open Claude Code in the repo folder and type **`I am BE1. Do B1-00.`** (replace `BE1` with your name once the team is assigned). Total: 15 tasks, one per milestone. `[ ]` = todo, `[~]` = in progress, `[x]` = merged to main.
 Sizes are relative (S, M, L) and will be re-estimated after M0. Support tasks are one step smaller than their milestone.
 Frontend tasks build against **mocks generated from the OpenAPI schema** until the matching backend task is merged. Backend tasks publish the schema for their endpoints before building them (`CONTRACTS.md`).
@@ -19,6 +19,8 @@ Size M · Milestone M0 (Foundations) · Depends: none · Unblocks: M1, M2 · Gat
 - UUIDv7 keys.
 - CI pipeline.
 - Docker dev environment.
+- Create the GitHub Project, milestones M0 to M14, lane labels and one issue per task ID (a script can read `docs/tasks/`), and the CI workflows with path filters (D-022).
+- Create `contracts/` with the OpenAPI schema generation and the generated TypeScript types.
 - **API operations:** section 4.16 of `API.md`. Publish the schema for them before building.
 - **Done when:** your part of the M0 exit criteria passes (see `PLAN.md`), tests are green, the OpenAPI schema is current, and the docs are updated.
 
@@ -33,6 +35,7 @@ Size L · Milestone M1 (Identity, tenancy and admin) · Depends: M0 · Unblocks:
 - At-least-one-owner rule.
 - `audit_logs` and `approvals`.
 - Platform-admin APIs (create, suspend shop, assign first owner).
+- Session lifetimes by client type (terminal about one working day, mobile longer) as server settings, and the shop setting `idle_lock_minutes` (D-024).
 - **API operations:** section 4.1 to 4.4 of `API.md`. Publish the schema for them before building.
 - **Done when:** your part of the M1 exit criteria passes (see `PLAN.md`), tests are green, the OpenAPI schema is current, and the docs are updated.
 
@@ -81,6 +84,9 @@ Size L · Milestone M5 (Billing and payments) · Depends: M3, M4 · Unblocks: M6
 - Hold and recall.
 - Void while the shift is open with reversing entries.
 - Snapshot lines.
+- Bill numbers use the branch and register prefix, continuous, no reset (D-026).
+- VAT is rounded once per bill: add the VAT of all lines (each keeps two decimals), then round half up to a whole taka (a fraction below 0.5 rounds down, otherwise up), through one shared function (D-026).
+- Write worked examples for VAT-inclusive and VAT-exclusive prices in the docs (where the rounding difference lands).
 - **API operations:** section 4.8 of `API.md`. Publish the schema for them before building.
 - **Done when:** your part of the M5 exit criteria passes (see `PLAN.md`), tests are green, the OpenAPI schema is current, and the docs are updated.
 
@@ -123,6 +129,7 @@ Size M · Milestone M9 (Returns and exchanges) · Depends: M5, M8 · Unblocks: M
 - Refund payments (`direction = out`).
 - Return numbers.
 - Approval rules.
+- Refund VAT amounts come from the original sale lines and are never re-rounded (D-026).
 - **API operations:** section 4.12 of `API.md`. Publish the schema for them before building.
 - **Done when:** your part of the M9 exit criteria passes (see `PLAN.md`), tests are green, the OpenAPI schema is current, and the docs are updated.
 

@@ -1,6 +1,6 @@
 # FE1 · Terminal (cashier-facing)
 
-Owns: `frontend/src/app/(terminal)/**` and terminal-only components. Touch another lane's code only for a task listed in your file, and have that lane's owner review it.
+Maintains: `frontend/src/app/(terminal)/**` and terminal-only components. Anyone else changes this code through a pull request that you review. In other lanes' code, change only what a task in your file needs, and have its maintainer review it.
 Start a task: open Claude Code in the repo folder and type **`I am FE1. Do F1-00.`** (replace `FE1` with your name once the team is assigned). Total: 15 tasks, one per milestone. `[ ]` = todo, `[~]` = in progress, `[x]` = merged to main.
 Sizes are relative (S, M, L) and will be re-estimated after M0. Support tasks are one step smaller than their milestone.
 Frontend tasks build against **mocks generated from the OpenAPI schema** until the matching backend task is merged. Backend tasks publish the schema for their endpoints before building them (`CONTRACTS.md`).
@@ -88,7 +88,8 @@ Size M · Milestone M6 (Receipts and hardware) · Depends: M5 · Unblocks: M7 ·
 - Barcode scanner handling.
 - Optional scale and label printer.
 - Duplicate-copy reprints.
-- Installable or desktop delivery per G5.
+- **First:** a short test on the real printer (print, cut, drawer kick) through the local print service or WebUSB. If it fails, raise it with the team (D-027).
+- Installable web app delivery for desktop and tablet, plus the small local print service (D-027).
 - **Contract from:** B1-06, B2-06. Use the mock until the real endpoints are merged.
 - **Pages:** PG-40, PG-43 in `PAGES.md`.
 - **API operations:** section 4.9 of `API.md`.
